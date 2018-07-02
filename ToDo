@@ -1,0 +1,9 @@
+1 - Remover a detecção da mão que movimenta os objetos
+ Ideia - subtração das particulas cor de pele
+
+2 - Adicionar uma db pra ser atualizada do que entrou/saiu
+  Ideia - manter uma database para controle do fluxo dos objetos
+
+3 - Melhorar a detecção do fundo, atualmente responde melhor com fundo branco 
+  Ideia - usar a mediana do background para detectar novos objetos num intervalo de tempo e.g. 10-20s
+  
