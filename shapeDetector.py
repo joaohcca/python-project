@@ -1,9 +1,7 @@
 import cv2
 import numpy as np
 import sqlite3 as sq3
-import math
 import datetime
-import time
 
 #inicialização de Variaveis Globais
 objetoLabel = 0
@@ -11,14 +9,15 @@ celular = 0
 tablet = 0
 notebook = 0
 objetoDesconhecido =0
-linhaReferencia = 200
+linhaReferencia = 120 #Valores Empiricos ajustados de acordo com a necessidade do projeto
 ThresholdBinarizacao = 70
-areaMinima = 200
-areaMaxObjeto1 = 1200
-areaMinObjeto2 = 1500
-areaMaxObjeto2 = 3000
-areaMinObjeto3 = 4000
-areaMaxObjeto3 = 6000
+areaMinima = 2000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
+areaMinObjeto1 = 20000
+areaMaxObjeto1 = 31000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
+areaMinObjeto2 = 70000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
+areaMaxObjeto2 = 95000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
+areaMinObjeto3 = 150000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
+areaMaxObjeto3 = 160000 #Valores Empiricos ajustados de acordo com a necessidade do projeto
 frameReferencia = None
 objNotAssigned = 0
 
@@ -26,36 +25,72 @@ def shapeDraw(cnt):
     cv2.drawContours(frame, contorno, -1, (0, 255, 0), 3)
     return
 
-
 def shapeIdentifier():
     # Avalianando qual o objeto
-    if area > areaMinima and area < areaMaxObjeto1:
+    objeto = 0
+    if area > areaMinObjeto1 and area < areaMaxObjeto1:
         objeto = 1
         print('Celular Identificado')
-    if area > areaMinObjeto2 and area < areaMaxObjeto2:
+    elif area > areaMinObjeto2 and area < areaMaxObjeto2:
         objeto = 2
         print('Tablet Identificado')
-    if area > areaMinObjeto3 and area < areaMaxObjeto3:
-        objeto = 3
-        print('Computador Identificado')
-    else:
-        print('Objeto Nao Identificado')
-        objeto = 4
+    #elif area > areaMinObjeto3 and area < areaMaxObjeto3:
+        #objeto = 3
+        #print('Computador Identificado')
     return(objeto)
 
 def contador(cX,coordenadaLinhaX):
-    if (coordenadaLinhaX - cX) > 10:
+    if ((coordenadaLinhaX - cX) > 10 and (coordenadaLinhaX - cX) < 14):
 # impedindo que o objeto seja contado inumeras vezes
         return 1
     else:
         return 0
 
 def displayContagem(frame,celular,tablet,notebook,objetoDesconhecido):
-    cv2.rectangle(frame, (485, 120), (635, 30), (0, 255, 0), 2)
+    cv2.rectangle(frame, (485, 100), (635, 30), (0, 255, 0), 2)
     cv2.putText(frame, "Celulares: {}".format(str(celular)), (490, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
     cv2.putText(frame, "Tablets: {}".format(str(tablet)), (490, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
-    cv2.putText(frame, "Notebooks: {}".format(str(notebook)), (490, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
-    cv2.putText(frame, "Desconhcecido: {}".format(str(objetoDesconhecido)), (490, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
+    #cv2.putText(frame, "Notebooks: {}".format(str(notebook)), (490, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
+    cv2.putText(frame, "Desconhcecido: {}".format(str(objetoDesconhecido)), (490, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (250, 0, 1), 2)
+    return
+
+def addDataBase(objetoLabel,area,perimetro,data):
+    conn = sq3.connect('produtos.db')
+    prod = conn.cursor()
+
+    if(objetoLabel == 1):
+        prod.execute(""" INSERT INTO produtos (tipo,area,perimetro,data)
+        VALUES ('Celular', ?, ?, ?)
+        """,(area, perimetro, data));
+        #prod.execute("""
+        #SELECT * FROM produtos;
+        #""");
+        conn.commit()
+        print('escreveu na tabela')
+        conn.close()
+    elif (objetoLabel == 2):
+        print(area)
+
+        prod.execute(""" INSERT INTO produtos (tipo,area,perimetro,data)
+        VALUES ('Tablet', ?, ?, ?)
+        """, (area, perimetro, data));
+        #prod.execute("""
+        #SELECT * FROM produtos;
+        #""");
+        conn.commit()
+        print('escreveu na tabela')
+        conn.close()
+    elif (objetoLabel == 4):
+        prod.execute(""" INSERT INTO produtos (tipo,area,perimetro,data)
+        VALUES ('Objeto Desconhecido', ?, ?, ?)
+        """ , (area, perimetro, data));
+        #prod.execute("""
+        #SELECT * FROM produtos;
+        #""");
+        conn.commit()
+        print('escreveu na tabela')
+        conn.close()
+
     return
 
 #*************************************SUBTRAÇÂO DE BACKGROUND E IDENTIFICAÇÂO DE OBJETO**************************************************************
@@ -110,6 +145,8 @@ while True:
         perimetro = cv2.arcLength(cnt, True)
         print('Area: ',area)
         #print('Perimetro: ', perimetro)
+#Data e Hora
+        data = datetime.datetime.now()
 
 # Desenhando contornos apartir de uma dado tamanho(Pra ignorar pequenos contornos)
         if contorno != None:
@@ -128,12 +165,18 @@ while True:
                 if (contador(cX,coordenadaLinhaX)):
                     if objetoLabel == 1:
                         celular += 1
-                    if objetoLabel == 2:
+                        addDataBase(objetoLabel,area,perimetro,data)
+                    elif objetoLabel == 2:
                         tablet += 1
-                    if objetoLabel == 3:
-                        notebook += 1
-                    else:
+                        print('entrou na db')
+                        addDataBase(objetoLabel, area, perimetro, data)
+                    #if objetoLabel == 3:
+                        #notebook += 1
+                        #addDataBase(objetoLabel, area, perimetro, data)
+                    elif objetoLabel == 4:
                         objetoDesconhecido +=1
+                        addDataBase(objetoLabel, area, perimetro, data)
+
                 else:
                     print('Aguardando Contagem')
         else:
@@ -146,42 +189,7 @@ while True:
         #objNotAssigned += 1
 
 #******************************************ARMAZENAMENTO DE INFORMAÇÔES NO BANCO DE DADOS**************************************************************
-#inicializando tabela com dados pra database
-    conn = sq3.connect('produtos.db')
-    prod = conn.cursor()
 
-    prod.execute("""
-    CREATE TABLE clientes (
-    	id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    	tipo TEXT NOT NULL,
-    	area FLOAT,
-    	perimetro FLOAT,
-    	evento_em DATE NOT NULL,
-    	evento_type STRING(3) NOT NULL
-    );
-    """)
-    conn.close();
-
-    # inserindo dados na tabela
-
-    #obj é uma tupla com os dados
-
-    prod.executemany("""
-    INSERT INTO produtos (id, tipo, area, perimetro, evento_em, evento_type)
-    VALUES (?,?,?,?,?,?)
-    """, obj)
-    conn.commit()
-
-   #removendo dados da database usando o id como indicador
-    id_produto = 8
-
-    # excluindo um registro da tabela
-    prod.execute("""
-    DELETE FROM produtos
-    WHERE id = ?
-    """, (id_produto,))
-
-    conn.commit()
 #**********************************************************ENCERRANDO APLICAÇÃO************************************************************************
 
     cv2.imshow('mascara', mask)
